@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>TicTacToe</title>
+    <style>
+
+      html,body {
+        width:100%;
+        height:100%;
+        display: flex;
+        align-items: center; /* vertical */
+        justify-content: center; /* horizontal */
+      }
+
+      th {
+        text-align: center;
+      }
+
+      td {
+        border: solid;
+        width: 30vw;
+        height: 25vh;
+        text-align : center;
+        font-size: 10vw;
+      }
+      
+    </style>
+  </head>
+  <script src="/socket.io/socket.io.js"></script>
+  <body>
+
+    <form>
+      <h1>Welcome to the game !</h1>
+      <label for="uname">Choose an username: </label>
+      <input type="text" id="uname" required>
+      <button>Save</button> 
+    </form>
+
+    <p hidden>Waiting for another player...</p>
+
+    <table hidden>
+      <tr>
+        <th colspan="3"></th>
+      </tr>
+      <tr>
+        <td id="cell1"></td>
+        <td id="cell2"></td>
+        <td id="cell3"></td>
+      </tr>
+      <tr>
+        <td id="cell4"></td>
+        <td id="cell5"></td>
+        <td id="cell6"></td>
+      </tr>
+      <tr>
+        <td id="cell7"></td>
+        <td id="cell8"></td>
+        <td id="cell9"></td>
+      </tr>
+    </table>
+    
+    <script>
+      /*
+      input text enter -> form submit.
+      button type = submit by default. (type=button does nothing)
+      form submit prevent defaut.
+      */
+
+      let socket = io(); //we initiate the socket
+
+      let form = document.querySelector('form');
+      let input = document.querySelector('input');
+      let p = document.querySelector('p');
+      let table = document.querySelector('table')
+      let th = document.querySelector('th')
+      let cells = document.querySelectorAll("td")
+
+      let clickable = false;
+      
+      cells.forEach(cell => cell.addEventListener('click', () => { clickCellHandler(cell); })); //the form of the listener because we need to pass an argument
+
+      function clickCellHandler(cell){
+
+        if(clickable){
+          socket.emit('endTurn', cell.id);
+        }
+        clickable = false;
+      }
+
+      let username = null;
+
+      //the user enters its name
+      form.addEventListener('submit', function(e) {
+        e.preventDefault(); //otherwise the form submits this info to the url in action=""
+
+        username = input.value;
+        form.hidden = true; //we hide the form
+      
+        socket.emit('newPlayer', username); //we send the new player to the server
+
+        p.hidden = false; //we show the waiting paragraph to the 1st player
+
+        //when there are 2 players, the servers send the 'start' event and you start the TicTacToe game
+        socket.on('newTurn', (GameData) => {
+
+          p.hidden = true;
+
+          table.hidden = false;
+
+          //populate the table
+          cells.forEach(cell => {
+            let cellNumber = cell.id.slice(-1)
+            cell.innerText = GameData.Matrix[cellNumber-1]
+          })
+
+          let Player = null;
+          let Opponent = null;
+          if(GameData.Player1.username === username) {
+            Player = GameData.Player1;
+            Opponent = GameData.Player2;
+          }
+          else {
+            Player = GameData.Player2;
+            Opponent = GameData.Player1;
+          }
+
+          if(Player.play){
+
+            th.innerText = `Your turn ${Player.username} (${Player.character})`;
+            clickable = true;
+
+          }
+          else{
+            th.innerText = `${Opponent.username}'s turn (${Opponent.character})`
+          }
+
+        });
+
+        socket.on('Player1', (GameData) => {
+
+          //populate the table
+          cells.forEach(cell => {
+            let cellNumber = cell.id.slice(-1)
+            cell.innerText = GameData.Matrix[cellNumber-1]
+          })
+
+          if(GameData.Player1.username === username) {
+            th.innerText = "YOU WON GG !!!! LET'S GOOOOOOOO (Click to play again)";
+          }
+          else {
+            th.innerText = "YOU LOST BOOOOOOOOOO! (Click anywhere to play again)";
+          }
+
+          document.querySelector("body").addEventListener('click',() => {
+
+            socket.emit('replay',username);
+
+            table.hidden = true;
+            p.hidden = false;
+
+          },{once:true});
+
+        });
+
+        socket.on('Player2', (GameData) => {
+
+          //populate the table
+          cells.forEach(cell => {
+            let cellNumber = cell.id.slice(-1)
+            cell.innerText = GameData.Matrix[cellNumber-1]
+          })
+
+          if(GameData.Player2.username === username) {
+            th.innerText = "YOU WON GG !!!! LET'S GOOOOOOOO (Click to play again)";
+          }
+          else {
+            th.innerText = "YOU LOST BOOOOOOOOOO! (Click anywhere to play again)";
+          }
+
+          document.querySelector("body").addEventListener('click',() => {
+
+            socket.emit('replay',username);
+
+            table.hidden = true;
+            p.hidden = false;
+
+          },{once:true});
+
+        });
+
+
+        socket.on('Draw', (GameData) => {
+
+          //populate the table
+          cells.forEach(cell => {
+            let cellNumber = cell.id.slice(-1)
+            cell.innerText = GameData.Matrix[cellNumber-1]
+          })
+
+          th.innerText = "DRAW !!! (Click anywhere to play again)";
+
+          document.querySelector("body").addEventListener('click',() => {
+
+            socket.emit('replay',username);
+
+            table.hidden = true;
+            p.hidden = false;
+
+          },{once:true});
+
+        });
+      });
+    </script>
+  </body>
+</html>
