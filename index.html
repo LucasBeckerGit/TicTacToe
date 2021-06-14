@@ -82,10 +82,10 @@
 
       function clickCellHandler(cell){
 
-        if(clickable){
+        if(clickable && cell.innerText === ""){
           socket.emit('endTurn', cell.id);
+          clickable = false;
         }
-        clickable = false;
       }
 
       let username = null;
